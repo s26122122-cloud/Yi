@@ -217,10 +217,12 @@
 
             <!-- ================= 按鈕 1: 已解鎖 (w1/index.html) ================= -->
             <a href="w1/index.html" class="gold-shimmer group washi-texture bg-white border-2 border-shrine-gold rounded-2xl p-5 shadow-lg hover:shadow-2xl hover:border-torii-red hover:-translate-y-2 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                <!-- 右上角御守結標籤 -->
                 <div class="absolute top-0 right-0 bg-torii-red text-shrine-gold text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-sm border-b border-l border-shrine-gold flex items-center gap-1">
                     <span>✨</span> 第一關 ‧ 開啟
                 </div>
                 <div>
+                    <!-- 圖標 -->
                     <div class="w-12 h-12 rounded-xl bg-torii-red/10 border border-torii-red/30 text-torii-red flex items-center justify-center text-2xl font-bold mb-3 group-hover:bg-torii-red group-hover:text-shrine-gold transition duration-300 shadow-sm">
                         📇
                     </div>
@@ -232,6 +234,7 @@
                         第一關 ‧ 參道開闢：展示個人風采與響應式名片設計。
                     </p>
                 </div>
+                <!-- 底部分界線與入口按鈕 -->
                 <div class="mt-5 pt-3 border-t border-shrine-gold/30 flex items-center justify-between text-xs font-bold text-torii-red">
                     <span>前往試煉參道</span>
                     <span class="group-hover:translate-x-1.5 transition-transform text-sm">⛩️ ➔</span>
@@ -240,10 +243,12 @@
 
             <!-- ================= 按鈕 2: 已解鎖 (w2/index.html) ================= -->
             <a href="w2/index.html" class="gold-shimmer group washi-texture bg-white border-2 border-shrine-gold rounded-2xl p-5 shadow-lg hover:shadow-2xl hover:border-torii-red hover:-translate-y-2 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                <!-- 右上角御守結標籤 -->
                 <div class="absolute top-0 right-0 bg-torii-red text-shrine-gold text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-sm border-b border-l border-shrine-gold flex items-center gap-1">
                     <span>✨</span> 第二關 ‧ 開啟
                 </div>
                 <div>
+                    <!-- 圖標 -->
                     <div class="w-12 h-12 rounded-xl bg-torii-red/10 border border-torii-red/30 text-torii-red flex items-center justify-center text-2xl font-bold mb-3 group-hover:bg-torii-red group-hover:text-shrine-gold transition duration-300 shadow-sm">
                         🍱
                     </div>
@@ -255,20 +260,23 @@
                         第二關 ‧ 美食神籤：解決抉擇困難症的御神籤抽籤工具。
                     </p>
                 </div>
+                <!-- 底部分界線與入口按鈕 -->
                 <div class="mt-5 pt-3 border-t border-shrine-gold/30 flex items-center justify-between text-xs font-bold text-torii-red">
                     <span>前往試煉參道</span>
                     <span class="group-hover:translate-x-1.5 transition-transform text-sm">⛩️ ➔</span>
                 </div>
             </a>
 
-            <!-- ================= 按鈕 3: 未解鎖灰色神社封印卡片 (JS 動態生成) ================= -->
+            <!-- ================= 按鈕 3: 靜態預留（未解鎖） ================= -->
 
-            <!-- ================= 按鈕 4: 已解鎖 (w4/index.html - 悄悄話) ================= -->
+            <!-- ================= 按鈕 4: 已解鎖 (w4/index.html) ================= -->
             <a href="w4/index.html" class="gold-shimmer group washi-texture bg-white border-2 border-shrine-gold rounded-2xl p-5 shadow-lg hover:shadow-2xl hover:border-torii-red hover:-translate-y-2 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                <!-- 右上角御守結標籤 -->
                 <div class="absolute top-0 right-0 bg-torii-red text-shrine-gold text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-sm border-b border-l border-shrine-gold flex items-center gap-1">
                     <span>✨</span> 第四關 ‧ 開啟
                 </div>
                 <div>
+                    <!-- 圖標 -->
                     <div class="w-12 h-12 rounded-xl bg-torii-red/10 border border-torii-red/30 text-torii-red flex items-center justify-center text-2xl font-bold mb-3 group-hover:bg-torii-red group-hover:text-shrine-gold transition duration-300 shadow-sm">
                         🤫
                     </div>
@@ -277,16 +285,17 @@
                         Week 4 - 悄悄話
                     </h3>
                     <p class="text-xs text-shrine-charcoal/80 font-medium mt-2 leading-relaxed">
-                        第四關 ‧ 秘密心願：傳遞專屬心聲與悄悄話互動頁面。
+                        第四關 ‧ 密語傳遞：傳遞心中隱密訊息與對話體驗。
                     </p>
                 </div>
+                <!-- 底部分界線與入口按鈕 -->
                 <div class="mt-5 pt-3 border-t border-shrine-gold/30 flex items-center justify-between text-xs font-bold text-torii-red">
                     <span>前往試煉參道</span>
                     <span class="group-hover:translate-x-1.5 transition-transform text-sm">⛩️ ➔</span>
                 </div>
             </a>
 
-            <!-- ================= 按鈕 5 ~ 16: 未解鎖灰色神社封印卡片 (JS 生成) ================= -->
+            <!-- ================= 未解鎖灰色神社封印卡片 (JS 動態跳過 Week 4) ================= -->
             <div id="locked-cards-container" class="contents"></div>
 
         </section>
@@ -308,13 +317,13 @@
     </div>
 
     <script>
-        // 1. 動態生成「未解鎖 / 結界封印」神社卡片 (跳過 1, 2, 4)
+        // 1. 動態生成未解鎖卡片（排除已被手動解鎖的 Week 1, 2, 4）
         const lockedContainer = document.getElementById('locked-cards-container');
-        const unlockedWeeks = [1, 2, 4];
+        const unlockedWeeks = [1, 2, 4]; // 已解鎖的週次列表
         const totalCards = 16;
 
         for (let i = 1; i <= totalCards; i++) {
-            if (unlockedWeeks.includes(i)) continue;
+            if (unlockedWeeks.includes(i)) continue; // 跳過已解鎖的卡片
 
             const numText = i < 10 ? `0${i}` : `${i}`;
             const cardHTML = `
