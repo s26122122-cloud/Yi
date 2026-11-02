@@ -330,4 +330,76 @@
     const imageInput = document.getElementById('image-input');
     const topTextInput = document.getElementById('top-text-input');
     const bottomTextInput = document.getElementById('bottom-text-input');
-    const fontSizeInput = document
+    const fontSizeInput = document.getElementById('font-size-input');
+    const topPosInput = document.getElementById('top-pos-input');
+    const bottomPosInput = document.getElementById('bottom-pos-input');
+    const downloadBtn = document.getElementById('download-btn');
+
+    const memeImg = document.getElementById('meme-img');
+    const topText = document.getElementById('top-text');
+    const bottomText = document.getElementById('bottom-text');
+    const memeBox = document.getElementById('meme-box');
+
+    // 【1. 本機圖片讀取】使用 FileReader 避免網路跨域 (CORS) 錯誤
+    imageInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        // 當讀取完成時，將 Base64 編碼設定為圖片網址
+        reader.onload = function(e) {
+          memeImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file); // 開始將檔案讀取為 Data URL
+      }
+    });
+
+    // 【2. 即時文字同步】監聽輸入框 input 事件
+    topTextInput.addEventListener('input', () => {
+      topText.innerText = topTextInput.value;
+    });
+
+    bottomTextInput.addEventListener('input', () => {
+      bottomText.innerText = bottomTextInput.value;
+    });
+
+    // 【3. 滑桿參數控制】監聽 range 滑桿
+    // 調整字體大小
+    fontSizeInput.addEventListener('input', () => {
+      const size = fontSizeInput.value + 'px';
+      topText.style.fontSize = size;
+      bottomText.style.fontSize = size;
+    });
+
+    // 調整上方文字 Top 位置 (%)
+    topPosInput.addEventListener('input', () => {
+      topText.style.top = topPosInput.value + '%';
+    });
+
+    // 調整下方文字 Bottom 位置 (%)
+    bottomPosInput.addEventListener('input', () => {
+      bottomText.style.bottom = bottomPosInput.value + '%';
+    });
+
+    // 初始化字體大小
+    topText.style.fontSize = fontSizeInput.value + 'px';
+    bottomText.style.fontSize = fontSizeInput.value + 'px';
+
+    // 【4. html2canvas 一鍵截圖下載】
+    downloadBtn.addEventListener('click', () => {
+      html2canvas(memeBox, {
+        useCORS: true, // 允許讀取圖片
+        scale: 2       // 2倍高清解析度輸出
+      }).then(canvas => {
+        // 建立隱藏 <a> 標籤自動觸發下載
+        const link = document.createElement('a');
+        link.download = 'my-meme.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }).catch(err => {
+        alert('下載失敗，請先點擊上傳一張本機圖片再試一次！');
+        console.error(err);
+      });
+    });
+  </script>
+</body>
+</html>
