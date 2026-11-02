@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberpunk Meme Generator | 龐克風迷因產生器</title>
+
+  <!-- 1. 引入 Google Fonts：龐克風標題字體 (Permanent Marker + Orbitron) 與粗體中文 (Noto Sans TC) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&family=Orbitron:wght@800&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+  <!-- 2. 引入 html2canvas CDN (將 DOM 轉為圖片下載) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    /* ---------------- CSS 龐克風樣式開始 ---------------- */
+
+    /* 龐克主題色彩變數：霓虹粉、螢光綠/青、深紫黑背景 */
+    :root {
+      --punk-pink: #ff007f;
+      --punk-cyan: #00f0ff;
+      --punk-yellow: #ffe600;
+      --bg-dark: #0a0612;
+      --card-bg: #140d24;
+      --border-color: #ff007f;
+      --text-main: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans TC', 'Orbitron', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      /* 龐克網格背景紋理 */
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(255, 0, 127, 0.15) 0%, transparent 60%),
+        linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+      background-size: 100% 100%, 30px 30px, 30px 30px;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-family: 'Permanent Marker', 'Noto Sans TC', cursive;
+      font-size: 2.8rem;
+      color: var(--punk-yellow);
+      text-shadow: 
+        3px 3px 0px var(--punk-pink),
+        -2px -2px 0px var(--punk-cyan);
+      letter-spacing: 2px;
+      transform: rotate(-1.5deg);
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: var(--punk-cyan);
+      font-size: 0.95rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    /* 主容器：Flex 排版 (左側控制、右側預覽) */
+    .main-container {
+      display: flex;
+      flex-direction: row;
+      gap: 30px;
+      max-width: 1050px;
+      width: 100%;
+      background-color: var(--card-bg);
+      border: 2px solid var(--punk-pink);
+      /* 龐克斜切角邊框樣式 */
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+      padding: 28px;
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.1);
+    }
+
+    /* 左側控制面板 */
+    .control-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-group label {
+      font-size: 0.85rem;
+      font-weight: 900;
+      color: var(--punk-cyan);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* 龐克風上傳按鈕 */
+    .file-upload-btn {
+      display: block;
+      padding: 12px;
+      background: #000;
+      border: 2px dashed var(--punk-cyan);
+      color: var(--punk-cyan);
+      text-align: center;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-shadow: 0 0 5px var(--punk-cyan);
+    }
+
+    .file-upload-btn:hover {
+      background: var(--punk-cyan);
+      color: #000;
+      box-shadow: 0 0 15px var(--punk-cyan);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* 文字輸入框 */
+    input[type="text"] {
+      padding: 12px;
+      background-color: #05030a;
+      border: 1px solid var(--punk-pink);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      box-shadow: 0 0 10px var(--punk-pink);
+    }
+
+    /* 龐克彩虹滑桿 */
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--punk-pink);
+      cursor: pointer;
+    }
+
+    /* 超酷龐克風下載按鈕 */
+    .download-btn {
+      margin-top: 10px;
+      padding: 16px;
+      background: var(--punk-yellow);
+      border: none;
+      color: #000;
+      font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 4px 4px 0px var(--punk-pink);
+      transition: all 0.15s ease;
+    }
+
+    .download-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0px var(--punk-cyan);
+      background: #fff;
+    }
+
+    .download-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px transparent;
+    }
+
+    /* 右側迷因預覽區 */
+    .preview-panel {
+      flex: 1.2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000;
+      border: 2px solid var(--punk-cyan);
+      padding: 12px;
+      overflow: hidden;
+      min-height: 350px;
+      box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.2);
+    }
+
+    /* html2canvas 截圖區域 */
+    #meme-box {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    #meme-img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #333;
+    }
+
+    /* 迷因文字 (黑色粗外框效果 + 龐克字體) */
+    .meme-text {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      color: #ffffff;
+      font-family: 'Permanent Marker', 'Noto Sans TC', sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1.15;
+      word-wrap: break-word;
+      pointer-events: none;
+      
+      /* 多層黑邊框 + 街頭龐克感黑色描邊 */
+      text-shadow: 
+        -3px -3px 0 #000,  
+         3px -3px 0 #000,
+        -3px  3px 0 #000,
+         3px  3px 0 #000,
+        -4px  0px 0 #000,
+         4px  0px 0 #000,
+         0px -4px 0 #000,
+         0px  4px 0 #000,
+         0px  5px 10px rgba(0,0,0,0.9);
+    }
+
+    #top-text {
+      top: 5%;
+    }
+
+    #bottom-text {
+      bottom: 5%;
+    }
+
+    /* ---------------- RWD 手機版響應式排版 ---------------- */
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column-reverse; /* 手機上預覽區在上，控制區在下 */
+        padding: 18px;
+        clip-path: none; /* 手機簡化邊框 */
+      }
+      header h1 {
+        font-size: 2.1rem;
+      }
+      .preview-panel {
+        min-height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>CYBER PUNK MEME</h1>
+    <p>// PUNK MEME GENERATOR //</p>
+  </header>
+
+  <div class="main-container">
+    <!-- 左側控制面板 -->
+    <div class="control-panel">
+      <!-- 1. 圖片上傳區 (FileReader) -->
+      <div class="input-group">
+        <label>01 // 上傳圖片底圖</label>
+        <label for="image-input" class="file-upload-btn">⚡ 選擇本機圖片檔 ⚡</label>
+        <input type="file" id="image-input" accept="image/*">
+      </div>
+
+      <!-- 2. 上下文字輸入區 -->
+      <div class="input-group">
+        <label for="top-text-input">02 // 上方文字 (Top Text)</label>
+        <input type="text" id="top-text-input" placeholder="當程式碼第一次就通過..." value="當程式碼一次就過">
+      </div>
+
+      <div class="input-group">
+        <label for="bottom-text-input">03 // 下方文字 (Bottom Text)</label>
+        <input type="text" id="bottom-text-input" placeholder="必定是系統出了BUG" value="必定是系統出了 BUG">
+      </div>
+
+      <!-- 3. 滑桿控制區 -->
+      <div class="input-group">
+        <label for="font-size-input">04 // 字體大小 (Font Size)</label>
+        <input type="range" id="font-size-input" min="20" max="80" value="38">
+      </div>
+
+      <div class="input-group">
+        <label for="top-pos-input">05 // 上方文字垂直位置 (Top Position)</label>
+        <input type="range" id="top-pos-input" min="0" max="40" value="5">
+      </div>
+
+      <div class="input-group">
+        <label for="bottom-pos-input">06 // 下方文字垂直位置 (Bottom Position)</label>
+        <input type="range" id="bottom-pos-input" min="0" max="40" value="5">
+      </div>
+
+      <!-- 4. 一鍵下載按鈕 -->
+      <button class="download-btn" id="download-btn">💥 下載迷因檔 (MY-MEME.PNG)</button>
+    </div>
+
+    <!-- 右側預覽區 -->
+    <div class="preview-panel">
+      <div id="meme-box">
+        <!-- 預設預覽底圖 -->
+        <img id="meme-img" src="https://via.placeholder.com/500x400/05030a/00f0ff?text=UPLOAD+YOUR+IMAGE" alt="迷因底圖">
+        <div id="top-text" class="meme-text">當程式碼一次就過</div>
+        <div id="bottom-text" class="meme-text">必定是系統出了 BUG</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------------- JavaScript 邏輯開始 ---------------- -->
+  <script>
+    // 取得所有 HTML 控制項與顯示元素
+    const imageInput = document.getElementById('image-input');
+    const topTextInput = document.getElementById('top-text-input');
+    const bottomTextInput = document.getElementById('bottom-text-input');
+    const fontSizeInput = document
