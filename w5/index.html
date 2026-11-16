@@ -219,8 +219,8 @@
                 <!-- 資料來源連線狀態註記 -->
                 <div class="mt-6 pt-4 border-t border-notion-border flex items-center justify-between text-[11px] text-notion-subtext">
                     <span>資料表：<code class="bg-notion-bg px-1.5 py-0.5 rounded text-notion-text">TelepathyData</code></span>
-                    <span id="csv-connection-status" class="flex items-center gap-1 text-morandi-sage font-medium">
-                        ● CSV 雲端連線就緒
+                    <span id="connection-status-badge" class="flex items-center gap-1 text-morandi-sage font-medium">
+                        ● GAS Web App 雙向連線就緒
                     </span>
                 </div>
             </div>
@@ -381,7 +381,7 @@
             雲端心電感應 · Notion Minimalist × Morandi Palette
         </div>
         <div id="api-mode-indicator" class="text-[11px]">
-            連線模式：Google Sheet CSV 輪詢 (每 2.5 秒自動同步)
+            連線模式：GAS API 即時輪詢 (每 2 秒自動同步)
         </div>
     </footer>
 
@@ -393,18 +393,13 @@
         </div>
     </div>
 
-    <!-- ================= Vanilla JS 邏輯與 GAS / CSV 資料串接 ================= -->
+    <!-- ================= Vanilla JS 邏輯與 GAS API 資料串接 ================= -->
     <script>
         // ==========================================
         // 1. 系統設定與 GAS API 串接常數
         // ==========================================
         const SHEET_NAME = 'TelepathyData';
-        // 唯讀 CSV 發布網址（用於高速輪詢讀取房間資料列）
-        const GAS_API_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTXmLzMg3TT9F9Dq_fzBtvPCEimkNkeIP_NMLZrS1UaUX92EYm1WKzJEiDwL3PiZUjFF-fq6c2DfBp4/pub?gid=0&single=true&output=csv";
-        
-        // 【選填】若已將附件 GAS 部署為網頁應用程式 (Web App)，請將 /exec 網址貼於此處以啟用雲端寫入；
-        // 若留空，系統仍會從 GAS_API_URL 讀取 CSV，並在本地端即時同步狀態與 3D 翻牌互動。
-        const GAS_EXEC_URL = "";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxogjEhALcjOWQ0jR0tpKU-AMP_NBUc8OdM5LOPFcPmMGbGBYnEX0M95AGIcMuPPGt6sQ/exec";
 
         // 莫蘭迪卡片色票輪替
         const MORANDI_CARD_THEMES = [
@@ -425,7 +420,9 @@
             question: '',
             answers: {},          // { "玩家A": "答案1", "玩家B": "答案2" }
             pollingTimer: null,
-            localMockDB: {}       // 當未設定 GAS_EXEC_URL 或等待 CSV 快取更新時的本機狀態暫存
+            isFetching: false,    // 避免網路較慢時輪詢請求重疊
+            lastWriteTime: 0,     // 寫入後的短暫防抖保護
+            localCache: {}        // 本機狀態備援
         };
 
         // ==========================================
@@ -520,7 +517,7 @@
             toggleHostConsole(isHost);
 
             // 立即抓取一次資料並啟動 setInterval 輪詢
-            fetchRoomState();
+            fetchRoomState(true);
             startPolling();
         }
 
@@ -553,14 +550,14 @@
         }
 
         // ==========================================
-        // 5. setInterval 輪詢機制 (Polling) 與 CSV 解析
+        // 5. setInterval 輪詢機制 (GET ?room= 讀取 GAS JSON)
         // ==========================================
         function startPolling() {
             stopPolling();
-            // 每 2.5 秒輪詢一次雲端最新狀態
+            // 每 2 秒透過 GAS doGet(?room=) 輪詢一次房間最新狀態
             appState.pollingTimer = setInterval(() => {
-                fetchRoomState();
-            }, 2500);
+                fetchRoomState(false);
+            }, 2000);
         }
 
         function stopPolling() {
@@ -571,120 +568,57 @@
         }
 
         function manualRefresh() {
-            fetchRoomState();
+            appState.lastWriteTime = 0;
+            fetchRoomState(true);
             showToast('已向雲端請求最新資料', '↻');
         }
 
-        // 透過 fetch 讀取 Google Sheet CSV 並依據房號分流多列資料
-        async function fetchRoomState() {
-            if (!appState.room) return;
+        // 透過 fetch GET 呼叫 GAS_API_URL?room=XXX 取得該房號列資料
+        async function fetchRoomState(force = false) {
+            if (!appState.room || appState.isFetching) return;
 
+            // 若剛執行寫入不到 1.5 秒且非強制更新，暫緩輪詢覆蓋以確保寫入完成
+            if (!force && Date.now() - appState.lastWriteTime < 1500) {
+                return;
+            }
+
+            appState.isFetching = true;
             try {
-                // 加入時間戳避免瀏覽器快取舊的 CSV
-                const cacheBusterUrl = `${GAS_API_URL}&_t=${Date.now()}`;
-                const response = await fetch(cacheBusterUrl);
-                if (!response.ok) throw new Error('CSV 讀取失敗');
+                const requestUrl = `${GAS_API_URL}?room=${encodeURIComponent(appState.room)}&_t=${Date.now()}`;
+                const response = await fetch(requestUrl);
+                if (!response.ok) throw new Error('GAS API 回應異常');
 
-                const csvText = await response.text();
-                const rows = parseCSV(csvText);
-
-                // 尋找符合目前房號的資料列 (Column A: 房號, B: 狀態, C: 題目, D: 答案 JSON)
-                let matchedRow = null;
-                for (let i = 1; i < rows.length; i++) {
-                    const rowRoom = (rows[i][0] || '').trim().toUpperCase();
-                    if (rowRoom === appState.room) {
-                        matchedRow = rows[i];
-                        break;
-                    }
-                }
-
-                let cloudData = { status: 'setup', question: '', answers: {} };
-                if (matchedRow) {
-                    cloudData.status = (matchedRow[1] || 'setup').trim();
-                    cloudData.question = matchedRow[2] || '';
-                    try {
-                        cloudData.answers = matchedRow[3] ? JSON.parse(matchedRow[3]) : {};
-                    } catch (err) {
-                        cloudData.answers = {};
-                    }
-                } else if (appState.localMockDB[appState.room]) {
-                    // 若試算表尚未建立該新房號列，讀取本機暫存狀態
-                    cloudData = appState.localMockDB[appState.room];
-                }
+                const cloudData = await response.json();
+                appState.localCache[appState.room] = cloudData;
 
                 syncUIWithData(cloudData);
                 updateSyncTimestamp(true);
             } catch (error) {
-                console.warn('輪詢讀取異常，切換使用本地狀態：', error);
-                if (appState.localMockDB[appState.room]) {
-                    syncUIWithData(appState.localMockDB[appState.room]);
+                console.warn('GAS GET 輪詢異常：', error);
+                if (appState.localCache[appState.room]) {
+                    syncUIWithData(appState.localCache[appState.room]);
                 }
                 updateSyncTimestamp(false);
+            } finally {
+                appState.isFetching = false;
             }
-        }
-
-        // 標準 RFC 4180 CSV 解析器（可正確處理 JSON 字串內的逗號與雙引號跳脫）
-        function parseCSV(text) {
-            const rows = [];
-            let currentRow = [];
-            let currentVal = '';
-            let inQuotes = false;
-
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                const nextChar = text[i + 1];
-
-                if (inQuotes) {
-                    if (char === '"' && nextChar === '"') {
-                        currentVal += '"';
-                        i++;
-                    } else if (char === '"') {
-                        inQuotes = false;
-                    } else {
-                        currentVal += char;
-                    }
-                } else {
-                    if (char === '"') {
-                        inQuotes = true;
-                    } else if (char === ',') {
-                        currentRow.push(currentVal);
-                        currentVal = '';
-                    } else if (char === '\r' && nextChar === '\n') {
-                        currentRow.push(currentVal);
-                        rows.push(currentRow);
-                        currentRow = [];
-                        currentVal = '';
-                        i++;
-                    } else if (char === '\n' || char === '\r') {
-                        currentRow.push(currentVal);
-                        rows.push(currentRow);
-                        currentRow = [];
-                        currentVal = '';
-                    } else {
-                        currentVal += char;
-                    }
-                }
-            }
-            if (currentVal !== '' || currentRow.length > 0) {
-                currentRow.push(currentVal);
-                rows.push(currentRow);
-            }
-            return rows;
         }
 
         // ==========================================
-        // 6. 雲端寫入封裝 (對應 GAS doPost 的 action 規格)
+        // 6. 雲端寫入封裝 (POST JSON 至 GAS_API_URL)
         // ==========================================
         async function pushRoomAction(actionPayload) {
-            // 同步更新本機備援狀態（確保未填寫 GAS_EXEC_URL 或等待試算表發布快取時畫面依然即時）
-            if (!appState.localMockDB[appState.room]) {
-                appState.localMockDB[appState.room] = {
+            appState.lastWriteTime = Date.now();
+
+            // 樂觀更新 (Optimistic UI)：點擊當下立即反應於畫面
+            if (!appState.localCache[appState.room]) {
+                appState.localCache[appState.room] = {
                     status: appState.status,
                     question: appState.question,
                     answers: { ...appState.answers }
                 };
             }
-            const roomData = appState.localMockDB[appState.room];
+            const roomData = appState.localCache[appState.room];
 
             if (actionPayload.action === 'set_question') {
                 roomData.status = 'playing';
@@ -700,25 +634,24 @@
                 roomData.answers = {};
             }
 
-            // 立即更新本地畫面
             syncUIWithData(roomData);
 
-            // 若有設定 GAS_EXEC_URL，則透過 POST 寫入 Google Sheet (對齊 GAS doPost 格式)
-            if (GAS_EXEC_URL && GAS_EXEC_URL.trim() !== '') {
-                try {
-                    await fetch(GAS_EXEC_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({
-                            room: appState.room,
-                            ...actionPayload
-                        })
-                    });
-                } catch (err) {
-                    console.error('寫入 GAS 失敗：', err);
-                    showToast('雲端寫入異常，已暫存於本地畫面', '⚠️');
-                }
+            // 透過 fetch POST 送出指令給 GAS doPost(e)
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        room: appState.room,
+                        ...actionPayload
+                    })
+                });
+                // 寫入後 1.2 秒自動向雲端確認最新狀態
+                setTimeout(() => fetchRoomState(true), 1200);
+            } catch (err) {
+                console.error('寫入 GAS 失敗：', err);
+                showToast('雲端寫入異常，請檢查網路連線', '⚠️');
             }
         }
 
@@ -961,7 +894,7 @@
                 el.textContent = `上次同步：${timeStr}`;
                 el.className = 'text-[11px] text-notion-subtext';
             } else {
-                el.textContent = `離線/本機模式 (${timeStr})`;
+                el.textContent = `連線重試中 (${timeStr})`;
                 el.className = 'text-[11px] text-morandi-rose';
             }
         }
