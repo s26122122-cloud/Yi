@@ -318,16 +318,23 @@
         const remainingContainer = document.getElementById('remaining-unlocked-cards');
         const chineseNums = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六'];
         const weekIcons = {
-            5: '🎋', 6: '🏮', 7: '🎐', 8: '📜',
-            9: '🍵', 10: '🎏', 11: '🦊', 12: '🔮',
+            5: '🔮', 6: '🏮', 7: '🎐', 8: '📜',
+            9: '🍵', 10: '🎏', 11: '🦊', 12: '🎋',
             13: '⚔️', 14: '🎴', 15: '🏯', 16: '👑'
+        };
+        const weekTitles = {
+            5: '雲端心電感應'
+        };
+        const weekSubtitles = {
+            5: '第五關 ‧ 雲端感應：跨越時空的即時心電感應與雲端同步體驗。'
         };
 
         for (let i = 5; i <= 16; i++) {
             const numText = i < 10 ? `0${i}` : `${i}`;
             const zhNum = chineseNums[i] || i;
             const icon = weekIcons[i] || '⛩️';
-            const subtitle = i === 16 ? '最終試煉 ‧ 圓滿：集大成網頁實作成果展示。' : `第${zhNum}關 ‧ 試煉開啟：探索第 ${i} 週網頁程式設計實作成果。`;
+            const title = weekTitles[i] || '試煉作品';
+            const subtitle = weekSubtitles[i] || (i === 16 ? '最終試煉 ‧ 圓滿：集大成網頁實作成果展示。' : `第${zhNum}關 ‧ 試煉開啟：探索第 ${i} 週網頁程式設計實作成果。`);
 
             const cardHTML = `
                 <a href="w${i}/index.html" class="gold-shimmer group washi-texture bg-white border-2 border-shrine-gold rounded-2xl p-5 shadow-lg hover:shadow-2xl hover:border-torii-red hover:-translate-y-2 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
@@ -340,7 +347,7 @@
                         </div>
                         <span class="text-xs font-extrabold tracking-widest text-torii-dark uppercase">Week ${numText}</span>
                         <h3 class="text-lg font-black text-shrine-black group-hover:text-torii-red transition duration-200 mt-0.5">
-                            Week ${i} - 試煉作品
+                            Week ${i} - ${title}
                         </h3>
                         <p class="text-xs text-shrine-charcoal/80 font-medium mt-2 leading-relaxed">
                             ${subtitle}
