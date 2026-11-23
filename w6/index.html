@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📸 咔嚓二選一！超可愛投票器</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: 圓潤卡通字體 -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #FEF08A;
+      background-image: radial-gradient(#F59E0B 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      color: #1E293B;
+    }
+
+    /* 卡通粗黑邊框與硬陰影 */
+    .cartoon-box {
+      border: 4px solid #1E293B;
+      box-shadow: 6px 6px 0px #1E293B;
+      border-radius: 24px;
+      background-color: #FFFFFF;
+    }
+
+    .cartoon-card {
+      border: 4px solid #1E293B;
+      box-shadow: 4px 4px 0px #1E293B;
+      border-radius: 20px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .cartoon-btn {
+      border: 3.5px solid #1E293B;
+      box-shadow: 4px 4px 0px #1E293B;
+      border-radius: 16px;
+      font-weight: 900;
+      transition: all 0.1s ease;
+      cursor: pointer;
+    }
+
+    .cartoon-btn:hover:not(:disabled) {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0px #1E293B;
+    }
+
+    .cartoon-btn:active:not(:disabled) {
+      transform: translate(3px, 3px);
+      box-shadow: 1px 1px 0px #1E293B;
+    }
+
+    .cartoon-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .cartoon-input {
+      border: 3.5px solid #1E293B;
+      border-radius: 14px;
+      box-shadow: inset 3px 3px 0px rgba(30, 41, 59, 0.1);
+      outline: none;
+    }
+
+    .cartoon-input:focus {
+      background-color: #FFFBEB;
+      box-shadow: 3px 3px 0px #1E293B;
+    }
+
+    /* 拍照框 1:1 比例 */
+    .photo-slot {
+      aspect-ratio: 1 / 1;
+      border: 4px dashed #1E293B;
+      border-radius: 20px;
+      background-color: #F8FAFC;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .photo-slot:hover {
+      background-color: #E0F2FE;
+    }
+
+    .photo-slot.has-img {
+      border-style: solid;
+      box-shadow: 4px 4px 0px #1E293B;
+    }
+
+    /* 載入動畫 */
+    @keyframes bounce-spin {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(10deg); }
+    }
+    .cartoon-loader {
+      animation: bounce-spin 0.8s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-6 px-4 flex flex-col items-center justify-start">
+
+  <!-- 頂部標題列 -->
+  <header class="w-full max-w-md mb-6 flex items-center justify-between">
+    <div onclick="goHome()" class="cursor-pointer flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border-4 border-slate-800 shadow-[4px_4px_0px_#1E293B]">
+      <span class="text-2xl">📸</span>
+      <h1 class="text-xl font-black tracking-wide text-slate-800">咔嚓二選一</h1>
+    </div>
+
+    <!-- 右上角：建立新投票按鈕 & 隱藏管理員開票彩蛋 -->
+    <div class="flex items-center gap-2">
+      <button id="adminRevealBtn" onclick="adminForceReveal()" title="房主彩蛋：提前開票"
+        class="hidden bg-amber-300 hover:bg-amber-400 text-slate-900 text-xs font-black px-3 py-2 rounded-xl border-3 border-slate-800 shadow-[3px_3px_0px_#1E293B] active:translate-y-0.5">
+        👑 提前開票
+      </button>
+      <button id="newPollNavBtn" onclick="goHome()"
+        class="hidden bg-sky-300 hover:bg-sky-400 text-slate-900 text-xs font-black px-3 py-2 rounded-xl border-3 border-slate-800 shadow-[3px_3px_0px_#1E293B]">
+        ➕ 開新局
+      </button>
+    </div>
+  </header>
+
+  <!-- 全域 Loading 遮罩 -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-4">
+    <div class="cartoon-box p-6 max-w-xs w-full text-center bg-amber-200">
+      <div class="text-5xl mb-3 cartoon-loader">🚀</div>
+      <p id="loadingText" class="text-lg font-black text-slate-800">資料傳送中...</p>
+      <p class="text-xs font-bold text-slate-600 mt-1">請稍候，正在呼叫雲端小精靈</p>
+    </div>
+  </div>
+
+  <!-- ==================== 畫面一：建立投票 (Create View) ==================== -->
+  <main id="createView" class="w-full max-w-md cartoon-box p-6">
+    <div class="inline-block bg-rose-400 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-slate-800 mb-2">
+      STEP 1 · 拍照出題
+    </div>
+    <h2 class="text-2xl font-black text-slate-800 mb-4">選擇困難？讓朋友幫你決定！</h2>
+
+    <!-- 投票題目 -->
+    <div class="mb-4">
+      <label class="block text-sm font-black mb-1.5 text-slate-700">📝 投票題目</label>
+      <input type="text" id="pollTitle" placeholder="例如：午餐吃拉麵還是咖哩飯？"
+        class="cartoon-input w-full px-4 py-3 font-bold text-slate-800" />
+    </div>
+
+    <!-- A / B 拍照區 (1:1 正方形) -->
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <!-- 選項 A -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="bg-sky-400 text-slate-900 text-xs font-black px-2.5 py-0.5 rounded-lg border-2 border-slate-800">選項 A</span>
+          <span id="statusA" class="text-xs font-bold text-slate-500">未拍照</span>
+        </div>
+        <div id="slotA" onclick="triggerCamera('A')" class="photo-slot flex flex-col items-center justify-center p-2 text-center">
+          <img id="previewA" class="hidden w-full h-full object-cover rounded-2xl" alt="選項A" />
+          <div id="placeholderA">
+            <div class="text-3xl mb-1">📷</div>
+            <p class="text-xs font-black text-slate-700">點擊拍 A 照</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-0.5">自動裁切 1:1</p>
+          </div>
+        </div>
+        <input type="file" id="inputA" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelect(event, 'A')" />
+      </div>
+
+      <!-- 選項 B -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="bg-rose-400 text-white text-xs font-black px-2.5 py-0.5 rounded-lg border-2 border-slate-800">選項 B</span>
+          <span id="statusB" class="text-xs font-bold text-slate-500">未拍照</span>
+        </div>
+        <div id="slotB" onclick="triggerCamera('B')" class="photo-slot flex flex-col items-center justify-center p-2 text-center">
+          <img id="previewB" class="hidden w-full h-full object-cover rounded-2xl" alt="選項B" />
+          <div id="placeholderB">
+            <div class="text-3xl mb-1">📷</div>
+            <p class="text-xs font-black text-slate-700">點擊拍 B 照</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-0.5">自動裁切 1:1</p>
+          </div>
+        </div>
+        <input type="file" id="inputB" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelect(event, 'B')" />
+      </div>
+    </div>
+
+    <!-- 截止時間設定 -->
+    <div class="mb-6">
+      <label class="block text-sm font-black mb-1.5 text-slate-700">⏰ 截止開票時間（幾點幾分）</label>
+      <input type="datetime-local" id="pollDeadline"
+        class="cartoon-input w-full px-4 py-2.5 font-bold text-slate-800 bg-white" />
+      <p class="text-[11px] font-bold text-slate-500 mt-1">時間一到自動鎖定票箱並公開得票結果！</p>
+    </div>
+
+    <!-- 建立按鈕 -->
+    <button onclick="createPoll()" class="cartoon-btn w-full py-3.5 bg-emerald-400 hover:bg-emerald-300 text-slate-900 text-lg">
+      ✨ 產生專屬投票連結！
+    </button>
+
+    <!-- 建立成功後的分享區塊 -->
+    <div id="shareBox" class="hidden mt-6 p-4 bg-sky-100 rounded-2xl border-3 border-slate-800">
+      <p class="text-sm font-black text-slate-800 mb-2">🎉 投票建立成功！快傳給朋友：</p>
+      <div class="flex gap-2 mb-3">
+        <input type="text" id="shareUrlInput" readonly class="cartoon-input flex-1 px-3 py-2 text-xs font-bold bg-white text-slate-700" />
+        <button onclick="copyShareUrl()" class="cartoon-btn bg-amber-300 px-3 py-2 text-xs">複製</button>
+      </div>
+      <button id="enterPollBtn" class="cartoon-btn w-full py-2.5 bg-sky-400 text-slate-900 text-sm">
+        👉 立即前往投票頁面
+      </button>
+    </div>
+  </main>
+
+  <!-- ==================== 畫面二：投票與開票 (Vote View) ==================== -->
+  <main id="voteView" class="hidden w-full max-w-md cartoon-box p-6">
+    <!-- 狀態與倒數計時橫幅 -->
+    <div id="statusBanner" class="mb-4 p-3 rounded-2xl border-3 border-slate-800 bg-amber-200 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span id="statusIcon" class="text-xl">⏳</span>
+        <div>
+          <p id="statusLabel" class="text-xs font-black text-slate-700">距離開票還有</p>
+          <p id="countdownText" class="text-base font-black text-rose-600 tracking-wider">計算中...</p>
+        </div>
+      </div>
+      <span id="pollIdBadge" class="text-[11px] font-black bg-white px-2.5 py-1 rounded-lg border-2 border-slate-800">
+        #P0000
+      </span>
+    </div>
+
+    <!-- 投票題目 -->
+    <h2 id="displayTitle" class="text-2xl font-black text-slate-800 mb-5 leading-snug">
+      載入題目中...
+    </h2>
+
+    <!-- A / B 選項卡片 -->
+    <div class="grid grid-cols-2 gap-4 mb-5">
+      <!-- 選項 A 卡片 -->
+      <div id="cardA" class="cartoon-card p-2.5 bg-sky-50 flex flex-col">
+        <div class="relative aspect-square rounded-xl overflow-hidden border-3 border-slate-800 mb-2.5 bg-white">
+          <img id="voteImgA" src="" alt="選項A" class="w-full h-full object-cover" />
+          <span class="absolute top-2 left-2 bg-sky-400 text-slate-900 text-xs font-black px-2.5 py-0.5 rounded-lg border-2 border-slate-800">
+            A
+          </span>
+          <!-- 獲勝皇冠 -->
+          <span id="crownA" class="hidden absolute top-1.5 right-1.5 text-2xl drop-shadow">👑</span>
+        </div>
+
+        <!-- 投票按鈕 (進行中顯示) -->
+        <button id="btnVoteA" onclick="submitVote('A')" class="cartoon-btn w-full py-2.5 bg-sky-400 hover:bg-sky-300 text-slate-900 text-sm">
+          👍 投給 A
+        </button>
+
+        <!-- 開票結果條 (開票後顯示) -->
+        <div id="resultA" class="hidden mt-1 text-center">
+          <div class="text-xl font-black text-sky-600"><span id="votesCountA">0</span> 票</div>
+          <div class="w-full bg-slate-200 h-3 rounded-full border-2 border-slate-800 overflow-hidden mt-1">
+            <div id="barA" class="bg-sky-400 h-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div id="percentA" class="text-xs font-black text-slate-600 mt-0.5">0%</div>
+        </div>
+      </div>
+
+      <!-- 選項 B 卡片 -->
+      <div id="cardB" class="cartoon-card p-2.5 bg-rose-50 flex flex-col">
+        <div class="relative aspect-square rounded-xl overflow-hidden border-3 border-slate-800 mb-2.5 bg-white">
+          <img id="voteImgB" src="" alt="選項B" class="w-full h-full object-cover" />
+          <span class="absolute top-2 left-2 bg-rose-400 text-white text-xs font-black px-2.5 py-0.5 rounded-lg border-2 border-slate-800">
+            B
+          </span>
+          <!-- 獲勝皇冠 -->
+          <span id="crownB" class="hidden absolute top-1.5 right-1.5 text-2xl drop-shadow">👑</span>
+        </div>
+
+        <!-- 投票按鈕 (進行中顯示) -->
+        <button id="btnVoteB" onclick="submitVote('B')" class="cartoon-btn w-full py-2.5 bg-rose-400 hover:bg-rose-300 text-white text-sm">
+          ❤️ 投給 B
+        </button>
+
+        <!-- 開票結果條 (開票後顯示) -->
+        <div id="resultB" class="hidden mt-1 text-center">
+          <div class="text-xl font-black text-rose-600"><span id="votesCountB">0</span> 票</div>
+          <div class="w-full bg-slate-200 h-3 rounded-full border-2 border-slate-800 overflow-hidden mt-1">
+            <div id="barB" class="bg-rose-400 h-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div id="percentB" class="text-xs font-black text-slate-600 mt-0.5">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已投票提示或開票總結 -->
+    <div id="voteFeedbackBox" class="hidden p-3.5 rounded-2xl border-3 border-slate-800 bg-emerald-200 text-center mb-4">
+      <p id="voteFeedbackText" class="text-sm font-black text-slate-800"></p>
+    </div>
+
+    <!-- 底部功能列：重新整理票況 / 分享連結 -->
+    <div class="flex gap-3">
+      <button onclick="loadPollData(currentPollId, true)" class="cartoon-btn flex-1 py-2.5 bg-white hover:bg-slate-100 text-slate-800 text-xs">
+        🔄 更新狀態
+      </button>
+      <button onclick="copyCurrentPageUrl()" class="cartoon-btn flex-1 py-2.5 bg-amber-300 hover:bg-amber-200 text-slate-900 text-xs">
+        🔗 分享給朋友投票
+      </button>
+    </div>
+  </main>
+
+  <script>
+    // ==================== 系統設定 ====================
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz5d5taE-3wfHCCtJG5F2XpDdpJxBj0yCkpm_r2yhpO6WlZoFy6dMcVEWkyQDlzoDJw/exec";
+
+    let base64ImgA = "";
+    let base64ImgB = "";
+    let currentPollId = "";
+    let pollData = null;
+    let countdownTimer = null;
+
+    // ==================== 初始化 ====================
+    window.addEventListener("DOMContentLoaded", () => {
+      // 預設截止時間為 30 分鐘後
+      setDefaultDeadline();
+
+      // 檢查網址是否有 ?poll=P...
+      const urlParams = new URLSearchParams(window.location.search);
+      const pollParam = urlParams.get("poll");
+
+      if (pollParam) {
+        switchToVoteView(pollParam);
+      } else {
+        switchToCreateView();
+      }
+    });
+
+    function setDefaultDeadline() {
+      const now = new Date(Date.now() + 30 * 60 * 1000);
+      const offset = now.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(now - offset).toISOString().slice(0, 16);
+      document.getElementById("pollDeadline").value = localISOTime;
+    }
+
+    // ==================== 畫面切換 ====================
+    function switchToCreateView() {
+      if (countdownTimer) clearInterval(countdownTimer);
+      document.getElementById("createView").classList.remove("hidden");
+      document.getElementById("voteView").classList.add("hidden");
+      document.getElementById("adminRevealBtn").classList.add("hidden");
+      document.getElementById("newPollNavBtn").classList.add("hidden");
+    }
+
+    function switchToVoteView(pollId) {
+      currentPollId = pollId;
+      document.getElementById("createView").classList.add("hidden");
+      document.getElementById("voteView").classList.remove("hidden");
+      document.getElementById("adminRevealBtn").classList.remove("hidden");
+      document.getElementById("newPollNavBtn").classList.remove("hidden");
+      document.getElementById("pollIdBadge").textContent = `#${pollId}`;
+
+      loadPollData(pollId, true);
+    }
+
+    function goHome() {
+      // 清除網址參數 (相容 CodePen iframe 環境)
+      try {
+        const cleanUrl = window.location.href.split("?")[0];
+        window.history.pushState({}, "", cleanUrl);
+      } catch (e) {}
+      switchToCreateView();
+    }
+
+    // ==================== 拍照與 Canvas 1:1 裁切壓縮 ====================
+    function triggerCamera(option) {
+      document.getElementById(`input${option}`).click();
+    }
+
+    function handleImageSelect(event, option) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          // 建立 800x800 正方形 Canvas 進行置中裁切與壓縮
+          const canvas = document.createElement("canvas");
+          const TARGET_SIZE = 800;
+          canvas.width = TARGET_SIZE;
+          canvas.height = TARGET_SIZE;
+          const ctx = canvas.getContext("2d");
+
+          // 計算 1:1 置中裁切座標
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, TARGET_SIZE, TARGET_SIZE);
+
+          // 輸出壓縮後的 JPEG Base64
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+
+          if (option === "A") {
+            base64ImgA = compressedBase64;
+            document.getElementById("previewA").src = compressedBase64;
+            document.getElementById("previewA").classList.remove("hidden");
+            document.getElementById("placeholderA").classList.add("hidden");
+            document.getElementById("slotA").classList.add("has-img");
+            document.getElementById("statusA").textContent = "✅ 已就緒";
+            document.getElementById("statusA").classList.replace("text-slate-500", "text-emerald-600");
+          } else {
+            base64ImgB = compressedBase64;
+            document.getElementById("previewB").src = compressedBase64;
+            document.getElementById("previewB").classList.remove("hidden");
+            document.getElementById("placeholderB").classList.add("hidden");
+            document.getElementById("slotB").classList.add("has-img");
+            document.getElementById("statusB").textContent = "✅ 已就緒";
+            document.getElementById("statusB").classList.replace("text-slate-500", "text-emerald-600");
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ==================== 建立投票 (POST action: "create") ====================
+    async function createPoll() {
+      const title = document.getElementById("pollTitle").value.trim();
+      const deadlineInput = document.getElementById("pollDeadline").value;
+
+      if (!title) {
+        alert("請輸入投票題目喔！✏️");
+        return;
+      }
+      if (!base64ImgA || !base64ImgB) {
+        alert("請先拍攝並上傳 A 與 B 兩張照片！📸");
+        return;
+      }
+      if (!deadlineInput) {
+        alert("請設定截止開票時間！⏰");
+        return;
+      }
+
+      // 產生專屬編號 P + 時間戳記後6碼 + 隨機2碼
+      const pollId = "P" + Date.now().toString().slice(-6) + Math.floor(10 + Math.random() * 90);
+      const deadlineISO = new Date(deadlineInput).toISOString();
+
+      showLoading("正在上傳照片並建立投票箱...");
+
+      try {
+        const response = await fetch(GAS_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "create",
+            pollId: pollId,
+            title: title,
+            imgA: base64ImgA,
+            imgB: base64ImgB,
+            deadline: deadlineISO
+          })
+        });
+
+        const result = await response.json();
+        hideLoading();
+
+        if (result.success) {
+          const baseUrl = window.location.href.split("?")[0];
+          const shareUrl = `${baseUrl}?poll=${pollId}`;
+
+          document.getElementById("shareUrlInput").value = shareUrl;
+          document.getElementById("shareBox").classList.remove("hidden");
+          document.getElementById("enterPollBtn").onclick = () => {
+            try {
+              window.history.pushState({}, "", shareUrl);
+            } catch (e) {}
+            switchToVoteView(pollId);
+          };
+        } else {
+          alert("建立失敗：" + (result.error || "未知錯誤"));
+        }
+      } catch (err) {
+        hideLoading();
+        console.error(err);
+        alert("連線失敗，請檢查網路或 GAS 部署權限！");
+      }
+    }
+
+    // ==================== 讀取投票資料 (GET ?poll=...) ====================
+    async function loadPollData(pollId, showSpinner = false) {
+      if
